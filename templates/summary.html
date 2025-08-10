@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Batch Summary - Order Availability Checker</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="container py-5">
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h4 m-0">Batch Summary</h1>
+        <div class="text-muted small">Stock: <strong>{{ stock_name }}</strong></div>
+      </div>
+
+      <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-summary" type="button" role="tab">Summary</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-calendar" type="button" role="tab">Calendar</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-charts" type="button" role="tab">Charts</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-fish" type="button" role="tab">Fish</button>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+        <div id="tab-summary" class="tab-pane fade show active" role="tabpanel">
+          <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle m-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Order File</th>
+                  <th class="text-end">Items</th>
+                  <th class="text-end">Full</th>
+                  <th class="text-end">Not Full</th>
+                  <th class="text-end">Not have</th>
+                  <th class="text-end">Total KG</th>
+                  <th style="min-width: 260px">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in items %}
+                <tr>
+                  <td>{{ item.order_name }}</td>
+                  <td class="text-end">{{ item.summary.total_items }}</td>
+                  <td class="text-end">{{ item.summary.full }}</td>
+                  <td class="text-end">{{ item.summary.not_full }}</td>
+                  <td class="text-end">{{ item.summary.not_have }}</td>
+                  <td class="text-end">{{ item.summary.total_kg_all }}</td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-primary" href="{{ url_for('view_result', token=item.token) }}">Open Result</a>
+                    <form class="d-inline" method="post" action="{{ url_for('schedule_order') }}">
+                      <input type="hidden" name="token" value="{{ item.token }}" />
+                      <input type="hidden" name="batch_token" value="{{ batch_token }}" />
+                      <input class="form-control form-control-sm d-inline-block" style="width: 160px" type="date" name="date" value="{{ item.scheduled_on or '' }}" />
+                      <button class="btn btn-sm btn-outline-secondary" type="submit">Set Date</button>
+                    </form>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-calendar" class="tab-pane fade" role="tabpanel">
+          <div class="row g-4">
+            <div class="col-lg-8">
+              <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body">
+                  <div class="d-flex justify-content-end mb-2">
+                    <button class="btn btn-sm btn-outline-primary" id="downloadCalBtn">Download Calendar PNG</button>
+                  </div>
+                  <div id='calendar'></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="h6 m-0">Recommendations</h2>
+                    <span class="text-muted small">by Full items</span>
+                  </div>
+                  <div class="small text-muted mb-2">Drag an order onto a day to schedule</div>
+                  <ol id="recList" class="mb-0 list-unstyled">
+                    {% for r in recommendations %}
+                      <li class="mb-2">
+                        <div class="d-flex justify-content-between align-items-center p-2 border rounded rec-item fc-event {{ 'disabled' if r.scheduled else '' }}" data-token="{{ r.token }}" data-title="{{ r.order_name }}" draggable="{{ 'false' if r.scheduled else 'true' }}">
+                          <span class="break-anywhere">{{ loop.index }}. {{ r.order_name }}</span>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success">Full: {{ r.full }}</span>
+                            <span class="badge bg-info text-dark">Ready KG: {{ r.ready_kg }}</span>
+                            {% if r.scheduled %}<span class="badge bg-secondary">Scheduled</span>{% endif %}
+                          </div>
+                        </div>
+                      </li>
+                    {% endfor %}
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-charts" class="tab-pane fade" role="tabpanel">
+          <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-body">
+              <div class="row g-4">
+                <div class="col-md-8">
+                  <canvas id="barChart"></canvas>
+                </div>
+                <div class="col-md-4">
+                  <canvas id="doughnutChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="tab-fish" class="tab-pane fade" role="tabpanel">
+          <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-body p-0">
+              <div class="d-flex justify-content-between align-items-center p-3 pt-3 pb-0">
+                <div class="text-muted small">Total Needed KG: <strong>{{ fish_total_kg }}</strong></div>
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('fish_buy', batch_token=batch_token) }}">Open Fish-buy Page</a>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle m-0 table-fixed">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width: 22%">Fish Name</th>
+                      <th style="width: 18%">Packed Size</th>
+                      <th style="width: 12%" class="text-end">Total Needed KG</th>
+                      <th style="width: 48%">
+                        <div class="d-flex justify-content-between align-items-center">
+                          <span>Orders</span>
+                          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('download_fish_excel', batch=batch_token) }}">Download Excel</a>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for g in fish_groups %}
+                    <tr>
+                      <td class="break-anywhere">{{ g.fish_name }}</td>
+                      <td class="break-anywhere">{{ g.packed_size }}</td>
+                      <td class="text-end">{{ g.total_needed_kg }}</td>
+                      <td class="orders-cell">
+                        <ul class="mb-2 list-unstyled">
+                          {% for o in g.orders %}
+                          <li class="order-item">
+                            <span class="order-name break-anywhere">{{ o.order_name }}</span>
+                            <span class="order-kg">— {{ o.needed_kg }} KG</span>
+                          </li>
+                          {% endfor %}
+                        </ul>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <a class="btn btn-outline-secondary" href="{{ url_for('batch_index') }}">Back to Batch</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Single Mode</a>
+      </div>
+    </div>
+  </body>
+  </html>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    let chartsInited = false;
+    let calendarInited = false;
+
+    const labels = {{ chart_labels|safe }};
+    const dataFull = {{ chart_full|safe }};
+    const dataNF = {{ chart_not_full|safe }};
+    const dataNH = {{ chart_not_have|safe }};
+    const doughnut = {{ doughnut_data|safe }};
+    const events = {{ calendar_events|safe }};
+
+    function initCharts() {
+      if (chartsInited) return;
+      const barCtx = document.getElementById('barChart');
+      const doughCtx = document.getElementById('doughnutChart');
+      if (!barCtx || !doughCtx) return;
+      new Chart(barCtx, {
+        type: 'bar',
+        data: { labels, datasets: [
+          { label: 'Full', data: dataFull, backgroundColor: '#22c55e' },
+          { label: 'Not Full', data: dataNF, backgroundColor: '#f59e0b' },
+          { label: 'Not have', data: dataNH, backgroundColor: '#6b7280' },
+        ] },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+      new Chart(doughCtx, {
+        type: 'doughnut',
+        data: { labels: ['Full KG', 'Not Full KG', 'Not have KG'], datasets: [{ data: doughnut, backgroundColor: ['#22c55e', '#f59e0b', '#6b7280'] }] },
+        options: { plugins: { legend: { position: 'bottom' } } }
+      });
+      chartsInited = true;
+    }
+
+    function initCalendar() {
+      if (calendarInited) return;
+      const calendarEl = document.getElementById('calendar');
+      if (!calendarEl) return;
+      // make external items draggable using FullCalendar interaction plugin API
+      const Draggable = FullCalendar.Draggable;
+      if (Draggable) {
+        new Draggable(document.getElementById('recList'), {
+          itemSelector: '.rec-item',
+          eventData: function(eventEl) {
+            return {
+              title: eventEl.getAttribute('data-title'),
+              extendedProps: { token: eventEl.getAttribute('data-token') }
+            };
+          }
+        });
+      }
+
+      const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        height: 600,
+        events,
+        droppable: true,
+        editable: true,
+        eventReceive(info) {
+          const token = info.event.extendedProps?.token || info.draggedEl?.getAttribute('data-token');
+          const dateStr = info.event.startStr;
+          if (!token) return;
+          fetch('{{ url_for('schedule_order') }}', {
+            method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ token, date: dateStr, batch_token: '{{ batch_token }}' })
+          }).then(() => {
+            // disable the dragged recommendation item so it can't be scheduled twice
+            const el = document.querySelector(`.rec-item[data-token="${token}"]`);
+            if (el) {
+              el.classList.add('disabled');
+              el.setAttribute('draggable', 'false');
+            }
+          });
+        }
+      });
+      calendar.render();
+      calendarInited = true;
+      // attach download handler once calendar exists
+      const btn = document.getElementById('downloadCalBtn');
+      if (btn) {
+        btn.addEventListener('click', async () => {
+          // small delay to ensure rendering settled
+          await new Promise(r => setTimeout(r, 150));
+          const el = document.getElementById('calendar');
+          if (!el) return;
+          const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 2 });
+          canvas.toBlob((blob) => {
+            if (!blob) return;
+            const a = document.createElement('a');
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth()+1).padStart(2,'0');
+            const dd = String(now.getDate()).padStart(2,'0');
+            a.download = `calendar-${yyyy}${mm}${dd}.png`;
+            a.href = URL.createObjectURL(blob);
+            document.body.appendChild(a);
+            a.click();
+            URL.revokeObjectURL(a.href);
+            a.remove();
+          });
+        });
+      }
+    }
+
+    document.addEventListener('shown.bs.tab', (ev) => {
+      const target = ev.target.getAttribute('data-bs-target');
+      if (target === '#tab-charts') initCharts();
+      if (target === '#tab-calendar') initCalendar();
+    });
+
+    // make recommendations draggable
+    document.addEventListener('DOMContentLoaded', () => {
+      const list = document.querySelectorAll('[data-token]');
+      list.forEach(el => {
+        el.setAttribute('draggable', 'true');
+        el.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', el.getAttribute('data-token'));
+        });
+      });
+    });
+  </script>
+
+

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fish Buy - Order Availability Checker</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="container py-5">
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h4 m-0">Fish (Not have)</h1>
+        <div class="text-muted small">Stock: <strong>{{ stock_name }}</strong></div>
+      </div>
+
+      <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+          <a class="nav-link" href="{{ url_for('view_batch', batch_token=batch_token) }}">Summary</a>
+        </li>
+        <li class="nav-item" role="presentation">
+          <a class="nav-link" href="{{ url_for('view_batch', batch_token=batch_token) }}#tab-calendar" onclick="localStorage.setItem('openTab','calendar')">Calendar</a>
+        </li>
+        <li class="nav-item" role="presentation">
+          <a class="nav-link" href="{{ url_for('view_batch', batch_token=batch_token) }}#tab-charts" onclick="localStorage.setItem('openTab','charts')">Charts</a>
+        </li>
+        <li class="nav-item" role="presentation">
+          <a class="nav-link active" aria-current="page" href="#">Fish</a>
+        </li>
+      </ul>
+
+      <div class="card shadow-sm border-0 rounded-4 mb-4">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle m-0 table-fixed">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 22%">Fish Name</th>
+                  <th style="width: 18%">Packed Size</th>
+                  <th style="width: 12%" class="text-end">Total Needed KG</th>
+                  <th style="width: 48%">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span>Orders</span>
+                      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('download_fish_excel', batch=batch_token) }}">Download Excel</a>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for g in fish_groups %}
+                <tr>
+                  <td class="break-anywhere">{{ g.fish_name }}</td>
+                  <td class="break-anywhere">{{ g.packed_size }}</td>
+                  <td class="text-end">{{ g.total_needed_kg }}</td>
+                  <td class="orders-cell">
+                    <ul class="mb-2 list-unstyled">
+                      {% for o in g.orders %}
+                      <li class="order-item">
+                        <span class="order-name break-anywhere">{{ o.order_name }}</span>
+                        <span class="order-kg">— {{ o.needed_kg }} KG</span>
+                        <form class="d-inline" method="post" action="{{ url_for('set_decision') }}">
+                          <input type="hidden" name="batch_token" value="{{ batch_token }}" />
+                          <input type="hidden" name="fish_name" value="{{ g.fish_name }}" />
+                          <input type="hidden" name="packed_size" value="{{ g.packed_size }}" />
+                          <input type="hidden" name="order_name" value="{{ o.order_name }}" />
+                          <input type="hidden" name="redirect_to" value="fish_buy" />
+                          <select class="form-select form-select-sm d-inline-block" style="width: 130px; min-width: 120px" name="decision" onchange="this.form.submit()">
+                            <option value="" {{ '' == (o.decision or '') and 'selected' or '' }}>- Decide -</option>
+                            <option value="Replace" {{ 'Replace' == (o.decision or '') and 'selected' or '' }}>Replace</option>
+                            <option value="Reject" {{ 'Reject' == (o.decision or '') and 'selected' or '' }}>Reject</option>
+                            <option value="Buy" {{ 'Buy' == (o.decision or '') and 'selected' or '' }}>Buy</option>
+                          </select>
+                        </form>
+                      </li>
+                      {% endfor %}
+                    </ul>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>
+
+

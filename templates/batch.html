@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Batch Processing - Order Availability Checker</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-lg-10">
+          <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-body p-4">
+              <h1 class="h4 mb-3 fw-bold">Batch Processing</h1>
+              <p class="text-muted mb-4">Upload one Stock file and up to 32 Order files. After processing, click any item to view its detailed result.</p>
+
+              {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+              <div class="mb-3">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category=='error' else category }}" role="alert">{{ message }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
+              {% endwith %}
+
+              <form method="post" action="{{ url_for('process_batch') }}" enctype="multipart/form-data">
+                <div class="mb-3">
+                  <label class="form-label">Stock Excel/CSV (1 file)</label>
+                  <input class="form-control" type="file" name="stock_file" accept=".xlsx,.xls,.csv" required />
+                </div>
+                <div class="mb-4">
+                  <label class="form-label">Order Excel/CSV (up to 32 files)</label>
+                  <input class="form-control" type="file" name="order_files" multiple accept=".xlsx,.xls,.csv" required />
+                  <div class="form-text">Hold Ctrl/Shift to select multiple files.</div>
+                </div>
+                <div class="d-flex gap-2">
+                  <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Single Mode</a>
+                  <button class="btn btn-primary" type="submit">Process Batch</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>
+
+

@@ -1,0 +1,74 @@
+body {
+  background: linear-gradient(180deg, #f8fafc 0%, #f3f4f6 100%);
+}
+
+.card {
+  border-radius: 1rem;
+}
+
+.stat-card {
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+}
+
+.stat-card .label {
+  opacity: 0.9;
+  font-size: 0.9rem;
+}
+
+.stat-card .value {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+table tbody tr.status-can-process td {
+  background-color: #f0fff4;
+}
+
+table tbody tr.status-insufficient td {
+  background-color: #fffaf0;
+}
+
+table tbody tr.status-not-found td {
+  background-color: #f7f7f7;
+}
+
+/* Responsive helpers */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.table-fixed {
+  table-layout: fixed;
+}
+
+.orders-cell {
+  max-width: 100%;
+}
+
+.order-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.order-name {
+  font-weight: 600;
+}
+
+.order-kg {
+  color: #475569;
+}
+
+.rec-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .stat-card .value { font-size: 1.25rem; }
+}
+
+
