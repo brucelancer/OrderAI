@@ -656,6 +656,7 @@ def process_batch():
                 "title": it["order_name"],
                 "start": it["scheduled_on"],
                 "url": url_for('view_result', token=it["token"]),
+                "extendedProps": {"token": it["token"]},
             })
 
     # Turn fish groups dict into a list for template
@@ -772,6 +773,7 @@ def view_batch(batch_token: str):
                 "title": it["order_name"],
                 "start": it["scheduled_on"],
                 "url": url_for('view_result', token=it["token"]),
+                "extendedProps": {"token": it["token"]},
             })
 
     fish_groups_list = [
@@ -981,6 +983,16 @@ def schedule_order():
     if batch_token:
         return redirect(url_for('view_batch', batch_token=batch_token))
     return redirect(url_for('batch_index'))
+
+
+@app.post("/unschedule-order")
+def unschedule_order():
+    token = request.form.get('token')
+    batch_token = request.form.get('batch_token')
+    if token:
+        SCHEDULE_STORE.pop(token, None)
+    # For fetch usage, return a simple OK
+    return "OK"
 
 
 @app.get("/result/<token>")

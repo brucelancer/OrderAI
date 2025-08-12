@@ -1,67 +1,198 @@
 {% extends 'base.html' %}
 {% block title %}Result - Order Availability Checker{% endblock %}
+
+{% block head_extra %}
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+{% endblock %}
+
 {% block content %}
     <div class="container py-5">
-      <div class="d-flex align-items-center justify-content-between mb-4">
-        <h1 class="h4 m-0">Result</h1>
-        <div class="text-muted small">Stock: <strong>{{ stock_name }}</strong> · Order: <strong>{{ order_name }}</strong></div>
+      <!-- Header Section -->
+      <div class="row align-items-center mb-4">
+        <div class="col-md-8">
+          <h1 class="display-6 fw-bold text-gradient mb-2">Processing Results</h1>
+          <div class="d-flex flex-wrap gap-3 align-items-center">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-database text-primary me-2"></i>
+              <span class="text-muted">Stock: <strong class="text-dark">{{ stock_name }}</strong></span>
+            </div>
+            <div class="d-flex align-items-center">
+              <i class="bi bi-cart text-success me-2"></i>
+              <span class="text-muted">Order: <strong class="text-dark">{{ order_name }}</strong></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+          <div class="d-flex flex-column flex-md-row gap-2 justify-content-md-end">
+            <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">
+              <i class="bi bi-arrow-left me-2"></i>Process Another
+            </a>
+            <div class="dropdown">
+              <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-download me-2"></i>Download
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{{ url_for('download_excel', token=download_token) }}">
+                  <i class="bi bi-file-earmark-spreadsheet me-2"></i>Excel File
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('download_pdf', token=download_token) }}">
+                  <i class="bi bi-file-earmark-pdf me-2"></i>PDF Report
+                </a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="row g-4 mb-4">
-        <div class="col-12 col-md-3">
+      <!-- Statistics Cards -->
+      <div class="row g-4 mb-5">
+        <div class="col-6 col-lg-3">
           <div class="stat-card bg-primary text-white">
-            <div class="label">Total Items</div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="label">Total Items</div>
+              <i class="bi bi-box display-6 opacity-25"></i>
+            </div>
             <div class="value">{{ summary.total_items }}</div>
-            <div class="small">Total KG: {{ summary.total_kg_all }}</div>
+            <div class="small d-flex align-items-center">
+              <i class="bi bi-weight me-1"></i>
+              Total: {{ summary.total_kg_all }} KG
+            </div>
           </div>
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-6 col-lg-3">
           <div class="stat-card bg-success text-white">
-            <div class="label">Full</div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="label">Available</div>
+              <i class="bi bi-check-circle display-6 opacity-25"></i>
+            </div>
             <div class="value">{{ summary.full }}</div>
-            <div class="small">Total KG: {{ summary.total_kg_full }}</div>
+            <div class="small d-flex align-items-center">
+              <i class="bi bi-weight me-1"></i>
+              Ready: {{ summary.total_kg_full }} KG
+            </div>
           </div>
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-6 col-lg-3">
           <div class="stat-card bg-warning text-dark">
-            <div class="label">Not Full</div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="label">Partial</div>
+              <i class="bi bi-exclamation-triangle display-6 opacity-25"></i>
+            </div>
             <div class="value">{{ summary.not_full }}</div>
-            <div class="small">Total KG: {{ summary.total_kg_not_full }}</div>
+            <div class="small d-flex align-items-center">
+              <i class="bi bi-weight me-1"></i>
+              Limited: {{ summary.total_kg_not_full }} KG
+            </div>
           </div>
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-6 col-lg-3">
           <div class="stat-card bg-secondary text-white">
-            <div class="label">Not have</div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="label">Unavailable</div>
+              <i class="bi bi-x-circle display-6 opacity-25"></i>
+            </div>
             <div class="value">{{ summary.not_have }}</div>
-            <div class="small">Total KG: {{ summary.total_kg_not_have }}</div>
+            <div class="small d-flex align-items-center">
+              <i class="bi bi-weight me-1"></i>
+              Missing: {{ summary.total_kg_not_have }} KG
+            </div>
           </div>
         </div>
       </div>
 
-      <ul class="nav nav-pills mb-3" id="statusTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="tab-all" data-bs-toggle="pill" data-bs-target="#pane-all" type="button" role="tab">All</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="tab-full" data-bs-toggle="pill" data-bs-target="#pane-full" type="button" role="tab">Full</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="tab-notfull" data-bs-toggle="pill" data-bs-target="#pane-notfull" type="button" role="tab">Not Full</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="tab-nothave" data-bs-toggle="pill" data-bs-target="#pane-nothave" type="button" role="tab">Not have</button>
-        </li>
-      </ul>
+      <!-- Filter Tabs -->
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <ul class="nav nav-pills" id="statusTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active d-flex align-items-center" id="tab-all" data-bs-toggle="pill" data-bs-target="#pane-all" type="button" role="tab">
+              <i class="bi bi-list-ul me-2"></i>All Items
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex align-items-center" id="tab-full" data-bs-toggle="pill" data-bs-target="#pane-full" type="button" role="tab">
+              <i class="bi bi-check-circle me-2"></i>Available
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex align-items-center" id="tab-notfull" data-bs-toggle="pill" data-bs-target="#pane-notfull" type="button" role="tab">
+              <i class="bi bi-exclamation-triangle me-2"></i>Partial
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex align-items-center" id="tab-nothave" data-bs-toggle="pill" data-bs-target="#pane-nothave" type="button" role="tab">
+              <i class="bi bi-x-circle me-2"></i>Unavailable
+            </button>
+          </li>
+        </ul>
+        
+        <!-- Search and Filter Controls -->
+        <div class="d-flex gap-2">
+          <div class="input-group input-group-sm" style="max-width: 250px;">
+            <span class="input-group-text">
+              <i class="bi bi-search"></i>
+            </span>
+            <input type="text" class="form-control" placeholder="Search items..." id="table-search">
+          </div>
+        </div>
+      </div>
 
+      <!-- Advanced toggle -->
+      <div class="d-flex justify-content-end mb-3">
+        <button class="btn btn-outline-dark btn-sm" id="toggleAdvanced">Advance Table</button>
+      </div>
+
+      <!-- Simple table (default) -->
+      <div id="simpleTable">
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-compact align-middle m-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Fish Name</th>
+                    <th>Packed Size</th>
+                    <th class="text-end">Order CTN</th>
+                    <th class="text-end">Order KG/CTN</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in records %}
+                  <tr class="status-{{ r.status|lower|replace(' ', '-') }}">
+                    <td>{{ r['fish name'] }}</td>
+                    <td>{{ r['packed size'] }}</td>
+                    <td class="text-end">{{ r.order_carton }}</td>
+                    <td class="text-end">{{ r.order_kg_per_ctn }}</td>
+                    <td>
+                      {% if r.status == 'Full' %}
+                        <span class="badge bg-success">Full</span>
+                      {% elif r.status == 'Not Full' %}
+                        <span class="badge bg-warning text-dark">Not Full</span>
+                      {% else %}
+                        <span class="badge bg-secondary">Not have</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced table (hidden by default) -->
+      <div id="advancedTable" class="d-none">
       <div class="tab-content">
         <div class="tab-pane fade show active" id="pane-all" role="tabpanel">
           <div class="card shadow-sm border-0 rounded-4 mb-4">
             <div class="card-body p-0">
               <div class="table-responsive">
-                <table class="table table-hover align-middle m-0">
+                <table class="table table-compact align-middle m-0">
               <thead class="table-light">
                 <tr>
-                  <th style="min-width: 220px">Fish Name</th>
+                  <th>Fish Name</th>
                   <th>Packed Size</th>
                   <th class="text-end">Order CTN</th>
                   <th class="text-end">Stock CTN</th>
@@ -110,20 +241,20 @@
           <div class="card shadow-sm border-0 rounded-4 mb-4">
             <div class="card-body p-0">
               <div class="table-responsive">
-                <table class="table table-hover align-middle m-0">
+                <table class="table table-compact align-middle m-0">
                   <thead class="table-light">
                     <tr>
-                      <th style="min-width: 220px">Fish Name</th>
+                      <th>Fish Name</th>
                       <th>Packed Size</th>
-                      <th class="text-end">Order CTN</th>
-                      <th class="text-end">Stock CTN</th>
-                      <th class="text-end">Order KG/CTN</th>
-                      <th class="text-end">Stock KG/CTN</th>
-                      <th class="text-end">Balance Stock CTN</th>
-                      <th class="text-end">MC To Give</th>
-                      <th class="text-end">Can Fulfill</th>
-                      <th class="text-end">Shortfall</th>
-                      <th>Status</th>
+                      <th class="text-end" data-full-text="Order CTN" data-mobile-text="O.CTN">Order CTN</th>
+                      <th class="text-end" data-full-text="Stock CTN" data-mobile-text="S.CTN">Stock CTN</th>
+                      <th class="text-end" data-full-text="Order KG/CTN" data-mobile-text="O.KG">Order KG/CTN</th>
+                      <th class="text-end" data-full-text="Stock KG/CTN" data-mobile-text="S.KG">Stock KG/CTN</th>
+                      <th class="text-end" data-full-text="Balance Stock CTN" data-mobile-text="BAL">Balance Stock CTN</th>
+                      <th class="text-end" data-full-text="MC To Give" data-mobile-text="MC">MC To Give</th>
+                      <th class="text-end" data-full-text="Can Fulfill" data-mobile-text="CAN">Can Fulfill</th>
+                      <th class="text-end" data-full-text="Shortfall" data-mobile-text="SHORT">Shortfall</th>
+                      <th data-full-text="Status" data-mobile-text="ST">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -158,15 +289,112 @@
         </div>
         {% endfor %}
       </div>
-
-      <div class="d-flex gap-2">
-        <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Process Another</a>
-        <a class="btn btn-primary" href="{{ url_for('download_excel', token=download_token) }}">Download Excel</a>
-        <a class="btn btn-outline-primary" href="{{ url_for('download_pdf', token=download_token) }}">Download PDF</a>
       </div>
+
     </div>
 {% endblock %}
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}
+    <script>
+      // Enhanced table search functionality
+      (() => {
+        const simple = document.getElementById('simpleTable');
+        const advanced = document.getElementById('advancedTable');
+        const toggleBtn = document.getElementById('toggleAdvanced');
+
+        // Helper: filter simple table by active status tab
+        function applyStatusFilterToSimple(activeKey) {
+          if (!simple) return;
+          const rows = simple.querySelectorAll('tbody tr');
+          rows.forEach(row => {
+            row.style.display = '';
+          });
+          if (activeKey === 'all') return;
+          const classMap = {
+            full: 'status-full',
+            notfull: 'status-not-full',
+            nothave: 'status-not-have',
+          };
+          const want = classMap[activeKey];
+          rows.forEach(row => {
+            const has = row.classList.contains(want);
+            row.style.display = has ? '' : 'none';
+          });
+        }
+
+        // Determine current active tab key
+        function getActiveKey() {
+          const activeBtn = document.querySelector('#statusTabs .nav-link.active');
+          if (!activeBtn) return 'all';
+          if (activeBtn.id === 'tab-full') return 'full';
+          if (activeBtn.id === 'tab-notfull') return 'notfull';
+          if (activeBtn.id === 'tab-nothave') return 'nothave';
+          return 'all';
+        }
+        if (toggleBtn && simple && advanced) {
+          // Always start with simple table visible
+          simple.classList.remove('d-none');
+          advanced.classList.add('d-none');
+          toggleBtn.addEventListener('click', () => {
+            const advancedVisible = !advanced.classList.contains('d-none');
+            if (advancedVisible) {
+              // show simple
+              advanced.classList.add('d-none');
+              simple.classList.remove('d-none');
+              applyStatusFilterToSimple(getActiveKey());
+            } else {
+              // show advanced
+              simple.classList.add('d-none');
+              advanced.classList.remove('d-none');
+            }
+          });
+          // Initial filter for simple
+          applyStatusFilterToSimple(getActiveKey());
+        }
+
+        const searchInput = document.getElementById('table-search');
+        
+        if (searchInput) {
+          searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const container = simple && !simple.classList.contains('d-none') ? simple : advanced;
+            const bodies = container.querySelectorAll('.table tbody');
+            bodies.forEach(tbody => {
+              const rows = tbody.querySelectorAll('tr');
+              rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                  row.style.display = '';
+                } else {
+                  row.style.display = 'none';
+                }
+              });
+            });
+          });
+        }
+        
+        // Add smooth animations to cards
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('animate-in');
+            }
+          });
+        });
+        
+        document.querySelectorAll('.stat-card, .card').forEach(el => {
+          observer.observe(el);
+        });
+        
+        // React to status tab changes to filter simple table
+        document.getElementById('statusTabs')?.addEventListener('shown.bs.tab', (ev) => {
+          if (!simple || simple.classList.contains('d-none')) return;
+          applyStatusFilterToSimple(getActiveKey());
+        });
+
+        // Removed table row hover effects for better mobile experience
+      })();
+    </script>
+{% endblock %}
 
 

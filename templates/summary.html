@@ -93,8 +93,8 @@
                     {% for r in recommendations %}
                       <li class="mb-2">
                         <div class="d-flex justify-content-between align-items-center p-2 border rounded rec-item fc-event {{ 'disabled' if r.scheduled else '' }}" data-token="{{ r.token }}" data-title="{{ r.order_name }}" draggable="{{ 'false' if r.scheduled else 'true' }}">
-                          <span class="break-anywhere">{{ loop.index }}. {{ r.order_name }}</span>
-                          <div class="d-flex align-items-center gap-2">
+                          <span class="rec-title">{{ loop.index }}. {{ r.order_name }}</span>
+                          <div class="badge-group">
                             <span class="badge bg-success">Full: {{ r.full }}</span>
                             <span class="badge bg-info text-dark">Ready KG: {{ r.ready_kg }}</span>
                             {% if r.scheduled %}<span class="badge bg-secondary">Scheduled</span>{% endif %}
@@ -177,6 +177,27 @@
         <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Single Mode</a>
       </div>
       </div>
+    
+    <!-- Event Detail Modal -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="eventModalLabel">Order Detail</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-2"><strong>Order:</strong> <span class="event-title"></span></div>
+            <div class="mb-2"><strong>Date:</strong> <span class="event-date"></span></div>
+            <p class="text-muted small mb-0">You can remove this scheduled order to free the slot.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-danger" id="removeEventBtn">Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
@@ -240,6 +261,20 @@
         events,
         droppable: true,
         editable: true,
+        dragScroll: true,
+        snapDuration: '00:05:00',
+        dropAccept: '.rec-item',
+        eventContent(arg) {
+          // Friendly filename: take the last whitespace-separated token, then strip leading digits+
+          // underscore. Example: 'order-TH2 135_JBC010_25.xlsx' -> 'JBC010_25.xlsx'
+          const title = (arg.event.title || '').trim();
+          const lastToken = (title.split(/\s+/).pop() || title).trim();
+          const friendly = lastToken.replace(/^\d+_/, '');
+          const el = document.createElement('div');
+          el.className = 'fc-event-title';
+          el.textContent = friendly || title;
+          return { domNodes: [el] };
+        },
         eventReceive(info) {
           const token = info.event.extendedProps?.token || info.draggedEl?.getAttribute('data-token');
           const dateStr = info.event.startStr;
@@ -255,10 +290,116 @@
               el.setAttribute('draggable', 'false');
             }
           });
+        },
+        eventDragStart(info) {
+          // Hide the original element during drag to avoid double display
+          info.el.style.opacity = '0.3';
+        },
+        eventDragStop(info) {
+          // Restore original element visibility
+          info.el.style.opacity = '1';
+        },
+        eventDrop(info) {
+          const token = info.event.extendedProps?.token;
+          const dateStr = info.event.startStr;
+          if (!token) return;
+          fetch('{{ url_for('schedule_order') }}', {
+            method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ token, date: dateStr, batch_token: '{{ batch_token }}' })
+          }).catch(() => {
+            info.revert();
+          });
+        },
+        eventClick(info) {
+          info.jsEvent.preventDefault();
+          const token = info.event.extendedProps?.token;
+          // Build modal content
+          const title = info.event.title;
+          const dateStr = info.event.startStr;
+          const modal = document.getElementById('eventModal');
+          modal.querySelector('.modal-title').textContent = title;
+          modal.querySelector('.event-date').textContent = new Date(dateStr).toDateString();
+          const removeBtn = modal.querySelector('#removeEventBtn');
+          removeBtn.onclick = async () => {
+            await fetch('{{ url_for('unschedule_order') }}', {
+              method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({ token: token, batch_token: '{{ batch_token }}' })
+            });
+            info.event.remove();
+            // Re-enable recommendation card
+            const el = document.querySelector(`.rec-item[data-token="${token}"]`);
+            if (el) {
+              el.classList.remove('disabled');
+              el.setAttribute('draggable', 'true');
+            }
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            bsModal?.hide();
+          };
+          const bsModal = new bootstrap.Modal(modal);
+          bsModal.show();
         }
       });
       calendar.render();
       calendarInited = true;
+      
+      // Add global mouse tracking for calendar event dragging
+      let calendarDragGhost = null;
+      let isCalendarDragging = false;
+      
+      // Listen for FullCalendar's internal drag events
+      document.addEventListener('mousemove', (e) => {
+        if (isCalendarDragging && calendarDragGhost) {
+          requestAnimationFrame(() => {
+            if (calendarDragGhost) {
+              calendarDragGhost.style.left = e.clientX + 'px';
+              calendarDragGhost.style.top = e.clientY + 'px';
+            }
+          });
+        }
+      });
+      
+      // Enhanced event drag start to create custom ghost with full filename
+      const originalEventDragStart = calendar.getOption('eventDragStart');
+      calendar.setOption('eventDragStart', (info) => {
+        isCalendarDragging = true;
+        
+        // Get the full original title (not the shortened version)
+        const fullTitle = info.event.title || 'Event';
+        
+        // Create custom ghost element with full filename
+        calendarDragGhost = document.createElement('div');
+        calendarDragGhost.className = 'drag-ghost';
+        calendarDragGhost.textContent = fullTitle;
+        calendarDragGhost.style.position = 'fixed';
+        calendarDragGhost.style.pointerEvents = 'none';
+        calendarDragGhost.style.zIndex = '10000';
+        calendarDragGhost.style.transform = 'translate(-50%, -50%)';
+        calendarDragGhost.style.maxWidth = '300px'; // Allow longer text
+        calendarDragGhost.style.whiteSpace = 'nowrap';
+        document.body.appendChild(calendarDragGhost);
+        
+        // Reduce opacity of original element to minimize visual conflict
+        info.el.style.opacity = '0.2';
+        
+        if (originalEventDragStart) originalEventDragStart(info);
+      });
+      
+      // Enhanced event drag stop to cleanup
+      const originalEventDragStop = calendar.getOption('eventDragStop');
+      calendar.setOption('eventDragStop', (info) => {
+        isCalendarDragging = false;
+        
+        // Remove custom ghost
+        if (calendarDragGhost) {
+          calendarDragGhost.remove();
+          calendarDragGhost = null;
+        }
+        
+        // Restore original element opacity
+        info.el.style.opacity = '1';
+        
+        if (originalEventDragStop) originalEventDragStop(info);
+      });
       // attach download handler once calendar exists
       const btn = document.getElementById('downloadCalBtn');
       if (btn) {
@@ -292,15 +433,80 @@
       if (target === '#tab-calendar') initCalendar();
     });
 
-    // make recommendations draggable
-    document.addEventListener('DOMContentLoaded', () => {
-      const list = document.querySelectorAll('[data-token]');
-      list.forEach(el => {
-        el.setAttribute('draggable', 'true');
-        el.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('text/plain', el.getAttribute('data-token'));
-        });
-      });
-    });
+         // Enhanced drag functionality for recommendations
+     document.addEventListener('DOMContentLoaded', () => {
+       const list = document.querySelectorAll('#recList .rec-item');
+       let ghost = null;
+       let isDragging = false;
+       
+       function createGhost(title) {
+         if (ghost) removeGhost();
+         ghost = document.createElement('div');
+         ghost.className = 'drag-ghost';
+         ghost.textContent = title;
+         ghost.style.position = 'fixed';
+         ghost.style.pointerEvents = 'none';
+         ghost.style.zIndex = '10000';
+         ghost.style.transform = 'translate(-50%, -50%)'; // Center on cursor
+         document.body.appendChild(ghost);
+       }
+       
+       function removeGhost() { 
+         if (ghost) { 
+           ghost.remove(); 
+           ghost = null; 
+         }
+         isDragging = false;
+       }
+       
+       function updateGhostPosition(e) {
+         if (!ghost || !isDragging) return;
+         // Use requestAnimationFrame for smooth movement
+         requestAnimationFrame(() => {
+           if (ghost) {
+             ghost.style.left = e.clientX + 'px';
+             ghost.style.top = e.clientY + 'px';
+           }
+         });
+       }
+       
+       list.forEach(el => {
+         el.addEventListener('dragstart', (e) => {
+           isDragging = true;
+           const title = el.getAttribute('data-title') || el.textContent.trim();
+           createGhost(title);
+           
+           // Create invisible drag image
+           if (e.dataTransfer?.setDragImage) {
+             const canvas = document.createElement('canvas');
+             canvas.width = canvas.height = 1;
+             const ctx = canvas.getContext('2d');
+             ctx.globalAlpha = 0;
+             e.dataTransfer.setDragImage(canvas, 0, 0);
+           }
+           
+           // Set drag data
+           e.dataTransfer.setData('text/plain', el.getAttribute('data-token') || '');
+           e.dataTransfer.effectAllowed = 'move';
+         });
+         
+         el.addEventListener('dragend', removeGhost);
+       });
+       
+       // Global mouse move listener for smooth ghost tracking
+       document.addEventListener('dragover', (e) => {
+         e.preventDefault(); // Allow drop
+         updateGhostPosition(e);
+       });
+       
+       document.addEventListener('drop', removeGhost);
+       document.addEventListener('dragenter', (e) => e.preventDefault());
+       document.addEventListener('dragleave', (e) => {
+         // Only remove ghost if leaving the document entirely
+         if (!e.relatedTarget) {
+           removeGhost();
+         }
+       });
+     });
   </script>
 {% endblock %}

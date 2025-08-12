@@ -1,13 +1,54 @@
 {% extends 'base.html' %}
 {% block title %}Batch Processing - Order Availability Checker{% endblock %}
+
+{% block head_extra %}
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+{% endblock %}
+
 {% block content %}
     <div class="container py-5">
       <div class="row justify-content-center">
-        <div class="col-lg-10">
-          <div class="card shadow-lg border-0 rounded-4">
-            <div class="card-body p-4">
-              <h1 class="h4 mb-3 fw-bold">Batch Processing</h1>
-              <p class="text-muted mb-4">Upload one Stock file and up to 32 Order files. After processing, click any item to view its detailed result.</p>
+        <div class="col-lg-10 col-xl-9">
+          <!-- Hero Section -->
+          <div class="text-center mb-5">
+            <h1 class="display-6 fw-bold text-gradient mb-3">Batch Processing</h1>
+            <p class="lead text-muted mb-4">
+              Process multiple order files against a single stock file. Perfect for handling large-scale order analysis efficiently.
+            </p>
+            <div class="d-flex justify-content-center gap-3 mb-4">
+              <div class="feature-badge">
+                <i class="bi bi-stack text-primary"></i>
+                <span class="ms-2">Up to 32 Files</span>
+              </div>
+              <div class="feature-badge">
+                <i class="bi bi-speedometer2 text-success"></i>
+                <span class="ms-2">Bulk Processing</span>
+              </div>
+              <div class="feature-badge">
+                <i class="bi bi-bar-chart text-info"></i>
+                <span class="ms-2">Detailed Analytics</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Card -->
+          <div class="card shadow-lg border-0">
+            <div class="card-body p-4 p-md-5">
+              <!-- Mode Toggle -->
+              <div class="text-center mb-4">
+                <div class="btn-group" role="group" aria-label="Processing mode selection">
+                  <a class="btn btn-outline-primary" href="{{ url_for('index') }}">
+                    <i class="bi bi-file-earmark me-2"></i>Single Mode
+                  </a>
+                  
+                  <input type="radio" class="btn-check" name="mode" id="batch-mode" checked>
+                  <label class="btn btn-outline-primary" for="batch-mode">
+                    <i class="bi bi-files me-2"></i>Batch Mode
+                  </label>
+                </div>
+                <p class="small text-muted mt-2 mb-0">Batch mode processes multiple order files simultaneously</p>
+              </div>
 
               {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}
@@ -19,19 +60,76 @@
               {% endif %}
               {% endwith %}
 
-              <form method="post" action="{{ url_for('process_batch') }}" enctype="multipart/form-data">
-                <div class="mb-3">
-                  <label class="form-label">Stock Excel/CSV (1 file)</label>
-                  <input class="form-control" type="file" name="stock_file" accept=".xlsx,.xls,.csv" required />
+              <!-- Upload Form -->
+              <form class="needs-validation upload-form" method="post" action="{{ url_for('process_batch') }}" enctype="multipart/form-data" novalidate>
+                <div class="row g-4">
+                  <div class="col-12">
+                    <div class="upload-section">
+                      <label class="form-label d-flex align-items-center">
+                        <i class="bi bi-database me-2 text-primary"></i>
+                        <span class="fw-semibold">Stock Excel/CSV File</span>
+                        <span class="text-danger ms-1">*</span>
+                        <span class="badge bg-primary ms-auto">1 file required</span>
+                      </label>
+                      <div class="file-upload-wrapper">
+                        <input class="form-control file-input" type="file" name="stock_file" 
+                               accept=".xlsx,.xls,.csv" required id="stock-file" 
+                               aria-describedby="stock-file-help" />
+                        <div class="file-upload-overlay">
+                          <i class="bi bi-cloud-upload display-6 text-muted mb-2"></i>
+                          <p class="text-muted mb-0">Drop stock file here or click to browse</p>
+                        </div>
+                      </div>
+                      <div id="stock-file-help" class="form-text">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Your master stock file containing all available inventory
+                      </div>
+                      <div class="invalid-feedback">
+                        Please select a valid stock file.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <div class="upload-section">
+                      <label class="form-label d-flex align-items-center">
+                        <i class="bi bi-files me-2 text-success"></i>
+                        <span class="fw-semibold">Order Excel/CSV Files</span>
+                        <span class="text-danger ms-1">*</span>
+                        <span class="badge bg-success ms-auto">Up to 32 files</span>
+                      </label>
+                      <div class="file-upload-wrapper" id="order-files-wrapper">
+                        <input class="form-control file-input" type="file" name="order_files" 
+                               multiple accept=".xlsx,.xls,.csv" required id="order-files"
+                               aria-describedby="order-files-help" />
+                        <div class="file-upload-overlay">
+                          <i class="bi bi-cloud-upload display-6 text-muted mb-2"></i>
+                          <p class="text-muted mb-0">Drop multiple order files here or click to browse</p>
+                          <p class="text-muted small mb-0">Hold Ctrl/Cmd to select multiple files</p>
+                        </div>
+                      </div>
+                      <div id="order-files-help" class="form-text">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Select multiple order files to process against your stock inventory
+                      </div>
+                      <div class="invalid-feedback">
+                        Please select at least one order file.
+                      </div>
+                      <div id="selected-files" class="mt-2"></div>
+                    </div>
+                  </div>
                 </div>
-                <div class="mb-4">
-                  <label class="form-label">Order Excel/CSV (up to 32 files)</label>
-                  <input class="form-control" type="file" name="order_files" multiple accept=".xlsx,.xls,.csv" required />
-                  <div class="form-text">Hold Ctrl/Shift to select multiple files.</div>
-                </div>
-                <div class="d-flex gap-2">
-                  <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Single Mode</a>
-                  <button class="btn btn-primary" type="submit">Process Batch</button>
+
+                <div class="text-center mt-4">
+                  <button class="btn btn-primary btn-lg px-5" type="submit">
+                    <i class="bi bi-play-circle me-2"></i>
+                    <span class="btn-text">Process Batch</span>
+                    <span class="btn-loading d-none">
+                      <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                      Processing...
+                    </span>
+                  </button>
+                  <p class="small text-muted mt-2 mb-0">Batch processing may take 30-60 seconds depending on file sizes</p>
                 </div>
               </form>
             </div>
@@ -39,6 +137,145 @@
         </div>
       </div>
     </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+      // Enhanced batch form validation and UX
+      (() => {
+        const forms = document.querySelectorAll('.needs-validation');
+        const fileInputs = document.querySelectorAll('.file-input');
+        const orderFilesInput = document.getElementById('order-files');
+        const selectedFilesDiv = document.getElementById('selected-files');
+        
+        // Form validation
+        Array.from(forms).forEach((form) => {
+          form.addEventListener('submit', (event) => {
+            if (!form.checkValidity()) {
+              event.preventDefault();
+              event.stopPropagation();
+            } else {
+              // Show loading state
+              const btn = form.querySelector('button[type="submit"]');
+              const btnText = btn.querySelector('.btn-text');
+              const btnLoading = btn.querySelector('.btn-loading');
+              
+              btn.disabled = true;
+              btnText.classList.add('d-none');
+              btnLoading.classList.remove('d-none');
+              
+              // Add loading class to form
+              form.classList.add('loading');
+            }
+            form.classList.add('was-validated');
+          }, false);
+        });
+        
+        // Enhanced file input UX
+        fileInputs.forEach(input => {
+          const wrapper = input.closest('.file-upload-wrapper');
+          const overlay = wrapper.querySelector('.file-upload-overlay');
+          
+          // File selection feedback
+          input.addEventListener('change', (e) => {
+            if (input.multiple) {
+              // Handle multiple files (order files)
+              const files = Array.from(e.target.files);
+              if (files.length > 0) {
+                overlay.innerHTML = `
+                  <i class="bi bi-files display-6 text-success mb-2"></i>
+                  <p class="text-success mb-0 fw-medium">${files.length} file${files.length > 1 ? 's' : ''} selected</p>
+                  <p class="text-muted small mb-0">Total size: ${(files.reduce((acc, file) => acc + file.size, 0) / 1024 / 1024).toFixed(2)} MB</p>
+                `;
+                wrapper.classList.add('file-selected');
+                
+                // Show selected files list
+                const filesList = files.map((file, index) => `
+                  <div class="d-flex align-items-center justify-content-between p-2 bg-light rounded mb-1">
+                    <div class="d-flex align-items-center">
+                      <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                      <span class="fw-medium">${file.name}</span>
+                    </div>
+                    <span class="text-muted small">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                  </div>
+                `).join('');
+                
+                selectedFilesDiv.innerHTML = `
+                  <div class="mt-3">
+                    <h6 class="fw-semibold mb-2">Selected Files:</h6>
+                    ${filesList}
+                  </div>
+                `;
+              } else {
+                overlay.innerHTML = `
+                  <i class="bi bi-cloud-upload display-6 text-muted mb-2"></i>
+                  <p class="text-muted mb-0">Drop multiple order files here or click to browse</p>
+                  <p class="text-muted small mb-0">Hold Ctrl/Cmd to select multiple files</p>
+                `;
+                wrapper.classList.remove('file-selected');
+                selectedFilesDiv.innerHTML = '';
+              }
+            } else {
+              // Handle single file (stock file)
+              const file = e.target.files[0];
+              if (file) {
+                overlay.innerHTML = `
+                  <i class="bi bi-file-earmark-check display-6 text-success mb-2"></i>
+                  <p class="text-success mb-0 fw-medium">${file.name}</p>
+                  <p class="text-muted small mb-0">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                `;
+                wrapper.classList.add('file-selected');
+              } else {
+                overlay.innerHTML = `
+                  <i class="bi bi-cloud-upload display-6 text-muted mb-2"></i>
+                  <p class="text-muted mb-0">Drop stock file here or click to browse</p>
+                `;
+                wrapper.classList.remove('file-selected');
+              }
+            }
+          });
+          
+          // Drag and drop functionality
+          ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            wrapper.addEventListener(eventName, preventDefaults, false);
+          });
+          
+          function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          
+          ['dragenter', 'dragover'].forEach(eventName => {
+            wrapper.addEventListener(eventName, () => wrapper.classList.add('drag-over'), false);
+          });
+          
+          ['dragleave', 'drop'].forEach(eventName => {
+            wrapper.addEventListener(eventName, () => wrapper.classList.remove('drag-over'), false);
+          });
+          
+          wrapper.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+              input.files = files;
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          });
+        });
+        
+        // Add smooth animations
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('animate-in');
+            }
+          });
+        });
+        
+        document.querySelectorAll('.card, .feature-badge').forEach(el => {
+          observer.observe(el);
+        });
+      })();
+    </script>
 {% endblock %}
 
 
